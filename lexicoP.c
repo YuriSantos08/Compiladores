@@ -103,7 +103,7 @@ char* nome_token(TipoToken t){
         case TOKEN_ID:      return "IDENTIFICADOR";
         case TOKEN_NUM_INT: return "NUM_INTEIRO";
         case TOKEN_NUM_REAL: return "NUM_REAL";
-        case TOKEN_FIM:       return "FIM";
+        case TOKEN_FIM:       return "FIM_DA_LINHA";
         case TOKEN_ERRO:      return "ERRO";
         default:              return "?";
     }
