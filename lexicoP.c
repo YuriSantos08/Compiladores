@@ -371,11 +371,27 @@ int main(void){
 
         for(;;){
             Token t = proximo_token(&S);
+
+            if(t.tipo == TOKEN_FIM) { // ignora TOKEN_FIM da linha
+                free(t.lexema);
+                break;
+            }
+
             fprintf(out, "(%s, %s) \t\t linha %d, col %d\n",
                 nome_token(t.tipo), t.lexema, Linha, t.coluna);
+
+            if(t.tipo == TOKEN_ERRO) {
+                free(t.lexema);
+                break;
+            }
+
             free(t.lexema);
-            if(t.tipo==TOKEN_FIM || t.tipo==TOKEN_ERRO) break;
         }
         Linha++;
     }
+
+    fprintf(out, "(%s, ) \t\t linha %d\n", nome_token(TOKEN_FIM), Linha);
+    
+    fclose(fp);
+    fclose(out);
 }
