@@ -324,7 +324,7 @@ Token coletar_numero(Scanner *sc) {
 
     while (isdigit((unsigned char)sc->c) || sc->c == '.') {
         if (sc->c == '.') {
-            if (tem_ponto) break; // só pode ter 1 ponto
+            if (tem_ponto) break; 
             tem_ponto = 1;
         }
         avancar(sc);
@@ -372,7 +372,7 @@ int main(void){
         for(;;){
             Token t = proximo_token(&S);
 
-            if(t.tipo == TOKEN_FIM) { // ignora TOKEN_FIM da linha
+            if(t.tipo == TOKEN_FIM) { 
                 free(t.lexema);
                 break;
             }
