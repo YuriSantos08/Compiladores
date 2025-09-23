@@ -3,6 +3,10 @@
 #include <string.h>
 #include <ctype.h>
 
+#define MAX_SIMBOL 200
+
+char *tabela_simbolos[MAX_SIMBOL];
+int qtd_simbolos = 0;
 typedef enum {
 
     // OPERADDDORES
@@ -42,6 +46,7 @@ typedef enum {
     TOKEN_DO,
 
      // Outros
+    TOKEN_STRING,    // String
     TOKEN_ID,       // Identificadores
     TOKEN_NUM_INT,  // Números inteiros
     TOKEN_NUM_REAL, // Números reais
@@ -100,6 +105,7 @@ char* nome_token(TipoToken t){
         case TOKEN_WHILE:   return "WHILE";
         case TOKEN_DO:      return "DO";
 
+        case TOKEN_STRING: return "STRING";
         case TOKEN_ID:      return "IDENTIFICADOR";
         case TOKEN_NUM_INT: return "NUM_INTEIRO";
         case TOKEN_NUM_REAL: return "NUM_REAL";
@@ -163,8 +169,36 @@ Token coletar_inteiro(Scanner *sc){
 
 Token coletar_numero(Scanner *sc); 
 
-Token proximo_token(Scanner *sc){
+Token coletar_string(Scanner *sc) {
+    int lin = sc->linha, col = sc->coluna;
+    avancar(sc); 
+
+    size_t ini = sc->i;
+    while (sc->c != '\'' && sc->c != '\0' && sc->c != '\n') {
+        avancar(sc);
+    }
+
+    if (sc->c == '\'') {
+        
+        size_t tamanho = sc->i - ini;
+        char *conteudo = str_ndup(sc->src + ini, tamanho);
+        avancar(sc); 
+        Token t = criar_token_texto(sc, TOKEN_STRING, conteudo, strlen(conteudo), lin, col);
+        free(conteudo);
+        return t;
+    } else {
+        
+        return token_erro_msg(sc, "STRING_ABERTA");
+    }
+}
+
+    Token proximo_token(Scanner *sc){
+
     pular_espacos(sc);
+
+    if (sc->c == '\'') {
+    return coletar_string(sc);
+}
 
     if(sc->c=='\0') return criar_token_texto(sc, TOKEN_FIM, "", 0, sc->linha, sc->coluna);
 
@@ -324,7 +358,7 @@ Token coletar_numero(Scanner *sc) {
 
     while (isdigit((unsigned char)sc->c) || sc->c == '.') {
         if (sc->c == '.') {
-            if (tem_ponto) break; // só pode ter 1 ponto
+            if (tem_ponto) break; 
             tem_ponto = 1;
         }
         avancar(sc);
@@ -352,16 +386,50 @@ TipoToken palavra_ou_id(const char *lexema) {
     return TOKEN_ID; 
 }
 
+void ini_tabela_simbolo() {
+    const char *reservadas[] = {
+        "program", "var", "integer", "real", "begin", "end",
+        "if", "then", "else", "while", "do"
+    };
+    int n = sizeof(reservadas) / sizeof(reservadas[0]);
+    for (int i = 0; i < n; i++) {
+        tabela_simbolos[qtd_simbolos++] = strdup(reservadas[i]);
+    }
+}
+
+int verifica_tabela_simbolo(const char *lexema) {
+    for (int i = 0; i < qtd_simbolos; i++) {
+        if (strcasecmp(tabela_simbolos[i], lexema) == 0) return 1;
+    }
+    return 0;
+}
+
+void novo_simbolo(const char *lexema) {
+    if (!verifica_tabela_simbolo(lexema) && qtd_simbolos < MAX_SIMBOL) {
+        tabela_simbolos[qtd_simbolos++] = strdup(lexema);
+    }
+}
+
+
+void exibir_tabela(FILE *out) {
+    fprintf(out, "\n--- Tabela de Símbolos ---\n");
+    for (int i = 0; i < qtd_simbolos; i++) {
+        fprintf(out, "%s\n", tabela_simbolos[i]);
+    }
+}
 
 
 
 int main(void){
+
 
     FILE * fp = fopen("leitura.pascal", "r");
     FILE * out = fopen("geracao.lex", "w");
     
     char Entrada[1024];
     int Linha = 1;
+
+    ini_tabela_simbolo();
 
     while(fscanf(fp, "%[^\n]\n", Entrada) > 0) {
         Scanner S; 
@@ -372,7 +440,7 @@ int main(void){
         for(;;){
             Token t = proximo_token(&S);
 
-            if(t.tipo == TOKEN_FIM) { // ignora TOKEN_FIM da linha
+            if(t.tipo == TOKEN_FIM) { 
                 free(t.lexema);
                 break;
             }
@@ -385,13 +453,16 @@ int main(void){
                 break;
             }
 
+            if (t.tipo == TOKEN_ID || (t.tipo >= TOKEN_PROGRAM && t.tipo <= TOKEN_DO)) {
+             novo_simbolo(t.lexema);
+}
             free(t.lexema);
         }
         Linha++;
     }
 
     fprintf(out, "(%s, ) \t\t linha %d\n", nome_token(TOKEN_FIM), Linha);
-    
+    exibir_tabela(out);
     fclose(fp);
     fclose(out);
 }
